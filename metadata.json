@@ -1,0 +1,6 @@
+{
+  "name": "My Market — Palestine",
+  "description": "منصة سوقي — فلسطين: المتابعة اللحظية والتحليل المالي الموثوق لأسعار الذهب والعملات والأسواق في فلسطين مع الشفافية الكاملة للمصادر",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

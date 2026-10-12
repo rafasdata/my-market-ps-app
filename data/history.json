@@ -1,0 +1,35 @@
+[
+  {
+    "date": "2026-10-11",
+    "timestamp": 1791728744310,
+    "goldSpotUSD": 4216.3,
+    "gold21kILS": 362.94,
+    "gold24kILS": 414.79,
+    "silverSpotUSD": 61.048,
+    "usdIls": 3.0599,
+    "jodIls": 4.3237,
+    "eurIls": 3.4316,
+    "sourceName": "COMEX/Yahoo & OpenER"
+  },
+  {
+    "date": "2026-10-12",
+    "timestamp": 1791789528954,
+    "gold21kReferenceILS": 363.32,
+    "gold21kLocalSellILS": 388,
+    "gold21kLocalBuyILS": 372,
+    "rashadiSellILS": 2793.6,
+    "rashadiBuyILS": 2678.4,
+    "rashadiRefILS": 2615.9,
+    "englishSellILS": 3251.8,
+    "englishBuyILS": 3117.7,
+    "englishRefILS": 3045,
+    "goldSpotUSD": 4210.6,
+    "silverSpotUSD": 61.26,
+    "usdIls": 3.0672,
+    "jodIls": 4.334,
+    "eurIls": 3.4251,
+    "sourceName": "COMEX/Yahoo & Palestine Syndicate",
+    "sourceUrl": "https://finance.yahoo.com/quote/GC=F",
+    "priceTypeAr": "ملاحظة يومية موثقة"
+  }
+]
