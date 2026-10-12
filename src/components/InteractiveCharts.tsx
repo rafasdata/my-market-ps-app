@@ -78,7 +78,7 @@ export const InteractiveCharts: React.FC<InteractiveChartsProps> = ({
 
   useEffect(() => {
     fetchHistory(selectedRange);
-  }, [selectedRange]);
+  }, [selectedRange, selectedCategory]);
 
   // Current metric configuration
   const metricConfig = useMemo(() => {

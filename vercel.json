@@ -1,0 +1,33 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/api/market/latest",
+      "destination": "/api/market/latest"
+    },
+    {
+      "source": "/api/market/history",
+      "destination": "/api/market/history"
+    },
+    {
+      "source": "/api/market/report",
+      "destination": "/api/market/report"
+    },
+    {
+      "source": "/api/news",
+      "destination": "/api/news"
+    },
+    {
+      "source": "/api/bulletins",
+      "destination": "/api/bulletins"
+    },
+    {
+      "source": "/api/sources/health",
+      "destination": "/api/sources/health"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

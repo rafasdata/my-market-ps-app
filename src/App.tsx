@@ -105,6 +105,7 @@ function MainDashboard() {
         isRefreshing={isRefreshing}
         onRefresh={handleManualRefresh}
         isStale={marketData?.isStale || false}
+        hasDegradedSources={marketData?.sourcesHealth?.some(s => s.status !== 'online') || false}
       />
 
       {/* Main Content Area */}
@@ -132,6 +133,14 @@ function MainDashboard() {
             <p className={`text-xs leading-relaxed ${isDark ? 'text-rose-200' : 'text-rose-700'}`}>
               تعذر الاتصال بمزودات البيانات أو هناك مشكلة في استرجاع الأسعار. لا نقوم باختلاق أي أسعار وهمية بديلة حفاظاً على النزاهة والمصداقية.
             </p>
+            {error && (
+              <div className={`p-3 rounded-lg text-xs font-mono text-right overflow-x-auto ${
+                isDark ? 'bg-slate-900/80 text-rose-300 border border-rose-900/50' : 'bg-rose-100/70 text-rose-800 border border-rose-200'
+              }`} dir="ltr">
+                <span className="font-bold">تشخيص الخطأ: </span>
+                <span>{error}</span>
+              </div>
+            )}
             <div className="pt-2">
               <button
                 onClick={() => loadMarketData(true)}

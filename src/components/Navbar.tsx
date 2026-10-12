@@ -79,19 +79,26 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex flex-wrap items-center gap-2.5 text-xs">
             {/* Feed Status Indicator */}
             <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border font-medium ${
-              isStale || hasDegradedSources
-                ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30'
-                : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+              isStale
+                ? 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30'
+                : hasDegradedSources
+                  ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30'
+                  : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
             }`}>
-              {isStale || hasDegradedSources ? (
+              {isStale ? (
+                <>
+                  <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
+                  <span>انقطاع في مزود الذهب</span>
+                </>
+              ) : hasDegradedSources ? (
                 <>
                   <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
-                  <span>{isStale ? 'بيانات محفوظة (متأخرة)' : 'بعض المصادر متأخرة'}</span>
+                  <span>بعض المزودات في وضع متأخر</span>
                 </>
               ) : (
                 <>
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                  <span>جميع المزودات متصلة</span>
+                  <span>المزودات متصلة ونشطة</span>
                 </>
               )}
             </div>

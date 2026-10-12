@@ -183,29 +183,36 @@ export class DataService {
   }
 
   /**
-   * Fetch Yahoo Finance chart data with timeout and headers
+   * Fetch Yahoo Finance chart data with multiple endpoint fallbacks (query1 and query2)
    */
   private static async fetchYahooChart(symbol: string, range = '5d', interval = '1d') {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 6000);
-    try {
-      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=${interval}`;
-      const res = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'application/json'
-        },
-        signal: controller.signal
-      });
-      if (!res.ok) throw new Error(`Yahoo status ${res.status} for ${symbol}`);
-      const data = await res.json();
-      return data?.chart?.result?.[0] || null;
-    } catch (err) {
-      console.warn(`Yahoo fetch error for ${symbol}:`, (err as Error).message);
-      return null;
-    } finally {
-      clearTimeout(timeout);
+    const hosts = ['https://query1.finance.yahoo.com', 'https://query2.finance.yahoo.com'];
+    for (const host of hosts) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 6000);
+      try {
+        const url = `${host}/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=${interval}`;
+        const res = await fetch(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/json'
+          },
+          signal: controller.signal
+        });
+        if (!res.ok) throw new Error(`Yahoo status ${res.status} for ${symbol} on ${host}`);
+        const data = await res.json();
+        const result = data?.chart?.result?.[0];
+        if (result) {
+          clearTimeout(timeout);
+          return result;
+        }
+      } catch (err) {
+        console.warn(`Yahoo fetch error on ${host} for ${symbol}:`, (err as Error).message);
+      } finally {
+        clearTimeout(timeout);
+      }
     }
+    return null;
   }
 
   /**
