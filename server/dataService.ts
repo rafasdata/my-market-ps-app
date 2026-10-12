@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import {
   MarketSnapshot,
   MetalPrice,
@@ -1276,7 +1276,14 @@ export class DataService {
     const apiKey = process.env.GEMINI_API_KEY;
     if (apiKey && apiKey !== 'MY_GEMINI_API_KEY' && apiKey.trim().length > 10) {
       try {
-        const ai = new GoogleGenAI({ apiKey });
+        const ai = new GoogleGenAI({
+          apiKey,
+          httpOptions: {
+            headers: {
+              'User-Agent': 'aistudio-build'
+            }
+          }
+        });
         const prompt = `أنت خبير اقتصادي ومحلل أسواق مالي متخصص في السوق الفلسطيني وأسواق الذهب والعملات.
 اكتب تقريراً صحفياً واقتصادياً موجزاً ودقيقاً في 4 فقرات عن أسواق اليوم استناداً حصرياً إلى هذه الأرقام والوقائع المثبتة التالية دون اختلاق أي رقم:
 
@@ -1307,45 +1314,69 @@ ${citedNews.map((n, i) => `${i + 1}. [${n.publisher}] ${n.title}`).join('\n')}
   "palestineImpactAr": "الأثر على السوق الفلسطيني وحركة الصاغة والادخار"
 }`;
 
-        const geminiPromise = ai.models.generateContent({
-          model: 'gemini-3.8-flash',
-          contents: prompt,
-          config: {
-            responseMimeType: 'application/json'
+        // Resilient candidate models: try primary, then fallback if high demand/timeout
+        const candidateModels = ['gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-3.1-flash-lite'];
+        let rawResponseText: string | null = null;
+
+        for (const candidateModel of candidateModels) {
+          try {
+            const geminiPromise = ai.models.generateContent({
+              model: candidateModel,
+              contents: prompt,
+              config: {
+                responseMimeType: 'application/json',
+                thinkingConfig: {
+                  thinkingLevel: candidateModel.includes('flash-lite') ? ThinkingLevel.MINIMAL : ThinkingLevel.LOW
+                }
+              }
+            });
+
+            const timeoutPromise = new Promise<null>((_, reject) =>
+              setTimeout(() => reject(new Error(`Timeout on ${candidateModel}`)), 6500)
+            );
+
+            const res = await Promise.race([geminiPromise, timeoutPromise]) as any;
+            if (res?.text && typeof res.text === 'string' && res.text.trim().length > 10) {
+              rawResponseText = res.text.trim();
+              break;
+            }
+          } catch {
+            // Quietly fallback to next candidate model if current model experiences high demand or timeout
+            continue;
           }
-        });
+        }
 
-        const timeoutPromise = new Promise<null>((_, reject) =>
-          setTimeout(() => reject(new Error('Gemini call timed out (20s)')), 20000)
-        );
+        if (rawResponseText) {
+          let cleanJson = rawResponseText;
+          if (cleanJson.startsWith('```')) {
+            cleanJson = cleanJson.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '');
+          }
+          const parsed = JSON.parse(cleanJson);
 
-        const response = await Promise.race([geminiPromise, timeoutPromise]) as any;
-        const text = response?.text || '';
-        const parsed = JSON.parse(text);
+          const report: DailyReport = {
+            id: `rep-${Date.now()}`,
+            date: today,
+            generatedAt: new Date().toISOString(),
+            isAiGenerated: true,
+            marketDirection: gold.change24hUSD > 0 ? 'up' : gold.change24hUSD < 0 ? 'down' : 'mixed',
+            headlineAr: parsed.headlineAr || `تقرير الأسواق: ${goldDir} الذهب عند ${gold.priceUSD}$ و${usdDir} الدولار/شيكل عند ${usdIls?.rate} ₪`,
+            summaryAr: parsed.summaryAr || `سجلت تعاملات اليوم ${goldDir}اً في أسعار الذهب الفورية عالمياً، وانعكس على السعر المرجعي لجرام 21 في فلسطين ليستقر عند ${g21?.referencePriceILS} شيكل.`,
+            goldAnalysisAr: parsed.goldAnalysisAr || `بلغ سعر أونصة الذهب في بورصة كوميكس ${gold.priceUSD} دولار، بينما يبلغ السعر المرجعي المحول لعيار 21 في فلسطين ${g21?.referencePriceILS} شيكل.`,
+            currenciesAnalysisAr: parsed.currenciesAnalysisAr || `استقر سعر صرف الدولار مقابل الشيكل عند ${usdIls?.rate} ₪، في حين بلغ سعر الدينار الأردني ${jodIls?.rate} ₪.`,
+            palestineImpactAr: parsed.palestineImpactAr || `تتأثر أسواق الصاغة في الضفة وغزة بالتغيرات في سعر الذهب العالمي وسعر صرف الدولار/شيكل. يضاف لسعر الجرام الخام مصنعية تتراوح بين 15 و35 شيكل.`,
+            verifiedFacts,
+            uncertaintiesAndGaps,
+            citedNews,
+            sourcesSummary,
+            disclaimerAr
+          };
 
-        const report: DailyReport = {
-          id: `rep-${Date.now()}`,
-          date: today,
-          generatedAt: new Date().toISOString(),
-          isAiGenerated: true,
-          marketDirection: gold.change24hUSD > 0 ? 'up' : gold.change24hUSD < 0 ? 'down' : 'mixed',
-          headlineAr: parsed.headlineAr || `تقرير الأسواق: ${goldDir} الذهب عند ${gold.priceUSD}$ و${usdDir} الدولار/شيكل عند ${usdIls?.rate} ₪`,
-          summaryAr: parsed.summaryAr || `سجلت تعاملات اليوم ${goldDir}اً في أسعار الذهب الفورية عالمياً، وانعكس على السعر المرجعي لجرام 21 في فلسطين ليستقر عند ${g21?.referencePriceILS} شيكل.`,
-          goldAnalysisAr: parsed.goldAnalysisAr || `بلغ سعر أونصة الذهب في بورصة كوميكس ${gold.priceUSD} دولار، بينما يبلغ السعر المرجعي المحول لعيار 21 في فلسطين ${g21?.referencePriceILS} شيكل.`,
-          currenciesAnalysisAr: parsed.currenciesAnalysisAr || `استقر سعر صرف الدولار مقابل الشيكل عند ${usdIls?.rate} ₪، في حين بلغ سعر الدينار الأردني ${jodIls?.rate} ₪.`,
-          palestineImpactAr: parsed.palestineImpactAr || `تتأثر أسواق الصاغة في الضفة وغزة بالتغيرات في سعر الذهب العالمي وسعر صرف الدولار/شيكل. يضاف لسعر الجرام الخام مصنعية تتراوح بين 15 و35 شيكل.`,
-          verifiedFacts,
-          uncertaintiesAndGaps,
-          citedNews,
-          sourcesSummary,
-          disclaimerAr
-        };
-
-        cachedReport = report;
-        lastReportTime = Date.now();
-        return report;
+          cachedReport = report;
+          lastReportTime = Date.now();
+          return report;
+        }
       } catch (err) {
-        console.warn('Gemini report generation failed, using deterministic report:', (err as Error).message);
+        console.warn('Gemini report generation encountered an issue, seamlessly using deterministic report:', (err as Error).message);
       }
     }
 
